@@ -8,12 +8,10 @@ describe('IdentityAccessService', () => {
     const repository = {
       findUserByEmail: jest.fn().mockResolvedValue(null),
       findUserById: jest.fn(),
-      createCustomerUser: jest.fn().mockResolvedValue({
-        id: 'user-1',
+      createCustomerAccount: jest.fn().mockResolvedValue({
+        id: 'customer-1',
         name: 'Felipe',
         email: 'felipe@example.com',
-        passwordHash: 'hash',
-        role: 'customer',
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -21,7 +19,8 @@ describe('IdentityAccessService', () => {
     } as unknown as IdentityAccessRepository;
 
     const jwtService = {} as JwtService;
-    const service = new IdentityAccessService(repository, jwtService);
+    const mailService = {} as never;
+    const service = new IdentityAccessService(repository, jwtService, mailService);
 
     const result = await service.register({
       name: 'Felipe',
@@ -46,11 +45,12 @@ describe('IdentityAccessService', () => {
         updatedAt: new Date(),
       }),
       findUserById: jest.fn(),
-      createCustomerUser: jest.fn(),
+      createCustomerAccount: jest.fn(),
     } as unknown as IdentityAccessRepository;
 
     const jwtService = {} as JwtService;
-    const service = new IdentityAccessService(repository, jwtService);
+    const mailService = {} as never;
+    const service = new IdentityAccessService(repository, jwtService, mailService);
 
     await expect(
       service.register({

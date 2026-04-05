@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Supplier } from '@prisma/client';
+import { lookupViaCep } from '@/core/http/viacep.client';
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { CreateSupplierAddressRecordDto } from './dtos/create-supplier-address-record.dto';
 import { CreateSupplierContactRecordDto } from './dtos/create-supplier-contact-record.dto';
@@ -69,40 +70,7 @@ export class SuppliersService {
       throw new BadRequestException('Informe um CEP valido com 8 digitos.');
     }
 
-    const response = await fetch(
-      `https://viacep.com.br/ws/${normalizedZipCode}/json/`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      },
-    );
-
-    if (response.status === 404) {
-      throw new NotFoundException('CEP nao encontrado nos Correios.');
-    }
-
-    if (!response.ok) {
-      throw new BadRequestException(
-        'Nao foi possivel consultar o CEP no ViaCEP.',
-      );
-    }
-
-    const data = (await response.json()) as ViaCepZipCodeResponse;
-
-    if (data.erro) {
-      throw new NotFoundException('CEP nao encontrado no ViaCEP.');
-    }
-
-    return {
-      zipCode: data.cep?.trim() || normalizedZipCode,
-      street: data.logradouro?.trim() || '',
-      complement: data.complemento?.trim() || null,
-      neighborhood: data.bairro?.trim() || '',
-      city: data.localidade?.trim() || '',
-      state: data.uf?.trim() || '',
-    };
+    return lookupViaCep(normalizedZipCode);
   }
 
   async createSupplier(input: CreateSupplierDto) {
@@ -414,14 +382,4 @@ type SupplierWithRelations = Supplier & {
     country: string;
     isActive: boolean;
   }>;
-};
-
-type ViaCepZipCodeResponse = {
-  cep?: string;
-  logradouro?: string;
-  complemento?: string;
-  bairro?: string;
-  localidade?: string;
-  uf?: string;
-  erro?: boolean;
 };

@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 import { LoginDto } from './dtos/login.dto';
@@ -28,9 +29,13 @@ export class IdentityAccessService {
   getOverview() {
     return {
       context: 'identity-access',
-      features: ['register', 'login', 'me', 'jwt-auth'],
+      features: [
+        'system-login',
+        'system-me',
+        'forgot-password',
+        'reset-password',
+      ],
       endpoints: [
-        'POST /api/identity-access/register',
         'POST /api/identity-access/login',
         'POST /api/identity-access/forgot-password',
         'POST /api/identity-access/reset-password',
@@ -56,7 +61,7 @@ export class IdentityAccessService {
 
     const passwordHash = await hash(body.password, 10);
 
-    const user = await this.repository.createCustomerUser({
+    const customer = await this.repository.createCustomerAccount({
       name: body.name,
       email: body.email.toLowerCase(),
       passwordHash,
@@ -66,12 +71,12 @@ export class IdentityAccessService {
     });
 
     return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      role: 'customer',
+      isActive: customer.isActive,
+      createdAt: customer.createdAt,
     };
   }
 
@@ -82,6 +87,12 @@ export class IdentityAccessService {
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Invalid credentials.');
+    }
+
+    if (user.role === 'customer') {
+      throw new UnauthorizedException(
+        'Acesso permitido apenas para usuarios internos do sistema.',
+      );
     }
 
     const passwordMatches = await compare(body.password, user.passwordHash);
@@ -119,7 +130,14 @@ export class IdentityAccessService {
       };
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    if (user.role === 'customer') {
+      return {
+        message:
+          'Se o e-mail estiver cadastrado, um codigo de recuperacao foi enviado.',
+      };
+    }
+
+    const code = String(randomInt(100000, 1000000));
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
     await this.repository.invalidateActivePasswordResetCodes(user.id);
@@ -196,6 +214,10 @@ export class IdentityAccessService {
     const user = await this.repository.findUserById(userId);
 
     if (!user || !user.isActive) {
+      throw new UnauthorizedException('Invalid access token.');
+    }
+
+    if (user.role === 'customer') {
       throw new UnauthorizedException('Invalid access token.');
     }
 

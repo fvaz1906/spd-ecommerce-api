@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -35,34 +36,38 @@ export class IdentityAccessController {
     return this.identityAccessService.getOverview();
   }
 
-  @ApiOperation({ summary: 'Cadastrar cliente' })
+  @ApiOperation({ summary: 'Cadastrar conta de cliente do ecommerce' })
   @ApiCreatedResponse({ type: RegisteredUserResponseDto })
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   register(@Body() body: RegisterUserDto) {
     return this.identityAccessService.register(body);
   }
 
-  @ApiOperation({ summary: 'Autenticar usuario' })
+  @ApiOperation({ summary: 'Autenticar usuario interno do sistema' })
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiUnauthorizedResponse({ description: 'Credenciais invalidas.' })
+  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 300_000 } })
   @Post('login')
   login(@Body() body: LoginDto) {
     return this.identityAccessService.login(body);
   }
 
   @ApiOperation({
-    summary: 'Solicitar codigo de recuperacao de senha',
+    summary: 'Solicitar codigo de recuperacao de senha para usuario interno',
   })
   @ApiOkResponse({ type: GenericMessageResponseDto })
+  @Throttle({ default: { limit: 3, ttl: 60_000, blockDuration: 600_000 } })
   @Post('forgot-password')
   forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.identityAccessService.forgotPassword(body);
   }
 
   @ApiOperation({
-    summary: 'Redefinir senha com codigo temporario',
+    summary: 'Redefinir senha de usuario interno com codigo temporario',
   })
   @ApiOkResponse({ type: GenericMessageResponseDto })
+  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 600_000 } })
   @Post('reset-password')
   resetPassword(@Body() body: ResetPasswordDto) {
     return this.identityAccessService.resetPassword(body);
@@ -70,7 +75,7 @@ export class IdentityAccessController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Obter usuario autenticado' })
+  @ApiOperation({ summary: 'Obter usuario interno autenticado' })
   @ApiOkResponse({ type: CurrentUserResponseDto })
   @ApiUnauthorizedResponse({
     description: 'Token ausente, invalido ou expirado.',

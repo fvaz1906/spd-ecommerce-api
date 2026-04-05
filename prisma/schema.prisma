@@ -24,6 +24,7 @@ enum StockMovementType {
   OUT
   RESERVED
   RELEASED
+  FULFILLED
   ADJUSTMENT
 }
 
@@ -42,6 +43,13 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
   REFUNDED
+}
+
+enum OrderSource {
+  SYSTEM
+  ECOMMERCE
+  MARKETPLACE
+  WHATSAPP
 }
 
 enum PaymentStatus {
@@ -79,6 +87,13 @@ enum CarrierStatus {
   INACTIVE
 }
 
+enum CustomerDocumentType {
+  CPF
+  CNPJ
+  PASSPORT
+  OTHER
+}
+
 model User {
   id                 String              @id @default(cuid())
   name               String
@@ -93,37 +108,60 @@ model User {
 }
 
 model PasswordResetCode {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   code      String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([code])
 }
 
 model Customer {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  document    String    @unique
-  phone       String?
-  birthDate   DateTime?
-  user        User      @relation(fields: [userId], references: [id])
-  addresses   Address[]
-  carts       Cart[]
-  orders      Order[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String               @id @default(cuid())
+  userId       String?              @unique
+  name         String
+  email        String               @unique
+  googleId     String?              @unique
+  passwordHash String?
+  isActive     Boolean              @default(true)
+  documentType CustomerDocumentType @default(CPF)
+  document     String               @unique
+  phone        String?
+  birthDate    DateTime?
+  user         User?                @relation(fields: [userId], references: [id])
+  contacts     CustomerContact[]
+  addresses    Address[]
+  carts        Cart[]
+  orders       Order[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model CustomerContact {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  role       String?
+  email      String?
+  phone      String?
+  isPrimary  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([customerId])
 }
 
 model Supplier {
-  id          String         @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
   tradeName   String?
-  document    String         @unique
+  document    String            @unique
   openedAt    DateTime?
   email       String?
   phone       String?
@@ -131,9 +169,9 @@ model Supplier {
   contacts    SupplierContact[]
   addresses   SupplierAddress[]
   notes       String?
-  status      SupplierStatus @default(ACTIVE)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  status      SupplierStatus    @default(ACTIVE)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
 model SupplierContact {
@@ -172,35 +210,36 @@ model SupplierAddress {
 }
 
 model Carrier {
-  id                        String           @id @default(cuid())
+  id                        String               @id @default(cuid())
   name                      String
   tradeName                 String?
-  document                  String           @unique
+  document                  String               @unique
   openedAt                  DateTime?
   email                     String?
   phone                     String?
   contactName               String?
-  averageFreightCostInCents Int              @default(0)
+  averageFreightCostInCents Int                  @default(0)
   contacts                  CarrierContact[]
   addresses                 CarrierAddress[]
   freightRules              CarrierFreightRule[]
+  shipments                 Shipment[]
   notes                     String?
-  status                    CarrierStatus    @default(ACTIVE)
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
+  status                    CarrierStatus        @default(ACTIVE)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
 }
 
 model CarrierContact {
-  id         String   @id @default(cuid())
-  carrierId  String
-  name       String
-  role       String?
-  email      String?
-  phone      String?
-  isActive   Boolean  @default(true)
-  carrier    Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  carrierId String
+  name      String
+  role      String?
+  email     String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  carrier   Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([carrierId])
 }
@@ -226,25 +265,25 @@ model CarrierAddress {
 }
 
 model CarrierFreightRule {
-  id                          String    @id @default(cuid())
-  carrierId                   String
-  name                        String
-  serviceCode                 String?
-  minWeightGrams              Int       @default(0)
-  maxWeightGrams              Int
-  minLengthCm                 Int       @default(0)
-  maxLengthCm                 Int
-  minWidthCm                  Int       @default(0)
-  maxWidthCm                  Int
-  minHeightCm                 Int       @default(0)
-  maxHeightCm                 Int
-  baseFreightCostInCents      Int
-  additionalCostPerKgInCents  Int       @default(0)
-  deliveryDays                Int?
-  isActive                    Boolean   @default(true)
-  carrier                     Carrier   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @updatedAt
+  id                         String   @id @default(cuid())
+  carrierId                  String
+  name                       String
+  serviceCode                String?
+  minWeightGrams             Int      @default(0)
+  maxWeightGrams             Int
+  minLengthCm                Int      @default(0)
+  maxLengthCm                Int
+  minWidthCm                 Int      @default(0)
+  maxWidthCm                 Int
+  minHeightCm                Int      @default(0)
+  maxHeightCm                Int
+  baseFreightCostInCents     Int
+  additionalCostPerKgInCents Int      @default(0)
+  deliveryDays               Int?
+  isActive                   Boolean  @default(true)
+  carrier                    Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 
   @@index([carrierId])
 }
@@ -262,6 +301,8 @@ model Address {
   city         String
   state        String
   country      String   @default("BR")
+  isPrimary    Boolean  @default(false)
+  isActive     Boolean  @default(true)
   customer     Customer @relation(fields: [customerId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -298,35 +339,35 @@ model Product {
 }
 
 model ProductImage {
-  id        String   @id @default(cuid())
-  productId String
-  url       String
-  storageKey String  @unique
-  filename  String
-  altText   String?
-  position  Int      @default(0)
-  isPrimary Boolean  @default(false)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  productId  String
+  url        String
+  storageKey String   @unique
+  filename   String
+  altText    String?
+  position   Int      @default(0)
+  isPrimary  Boolean  @default(false)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([productId, position])
 }
 
 model ProductVariant {
-  id             String          @id @default(cuid())
+  id             String         @id @default(cuid())
   productId      String
   name           String
-  sku            String          @unique
+  sku            String         @unique
   priceInCents   Int
   compareAtCents Int?
   attributes     Json?
-  product        Product         @relation(fields: [productId], references: [id])
+  product        Product        @relation(fields: [productId], references: [id])
   inventoryItem  InventoryItem?
   cartItems      CartItem[]
   orderItems     OrderItem[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model InventoryItem {
@@ -362,48 +403,56 @@ model Cart {
 }
 
 model CartItem {
-  id              String         @id @default(cuid())
-  cartId          String
+  id               String         @id @default(cuid())
+  cartId           String
   productVariantId String
-  quantity        Int
+  quantity         Int
   unitPriceInCents Int
-  cart            Cart           @relation(fields: [cartId], references: [id])
-  productVariant  ProductVariant @relation(fields: [productVariantId], references: [id])
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  cart             Cart           @relation(fields: [cartId], references: [id])
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
 
 model Coupon {
-  id                   String   @id @default(cuid())
-  code                 String   @unique
-  description          String?
-  discountPercentage   Float?
+  id                    String    @id @default(cuid())
+  code                  String    @unique
+  description           String?
+  discountPercentage    Float?
   discountAmountInCents Int?
-  startsAt             DateTime?
-  endsAt               DateTime?
-  usageLimit           Int?
-  active               Boolean  @default(true)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  startsAt              DateTime?
+  endsAt                DateTime?
+  usageLimit            Int?
+  active                Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
 
 model Order {
-  id                   String         @id @default(cuid())
-  customerId           String
-  code                 String         @unique
-  status               OrderStatus     @default(PENDING)
-  subtotalInCents      Int
-  discountInCents      Int            @default(0)
-  shippingInCents      Int            @default(0)
-  totalInCents         Int
+  id                      String               @id @default(cuid())
+  customerId              String
+  code                    String               @unique
+  source                  OrderSource          @default(SYSTEM)
+  status                  OrderStatus          @default(PENDING)
+  customerName            String
+  customerEmail           String
+  customerDocument        String?
+  customerPhone           String?
+  itemsCount              Int                  @default(0)
+  subtotalInCents         Int
+  discountInCents         Int                  @default(0)
+  shippingInCents         Int                  @default(0)
+  totalInCents            Int
+  notes                   String?
+  internalNotes           String?
   shippingAddressSnapshot Json
   billingAddressSnapshot  Json?
-  customer             Customer       @relation(fields: [customerId], references: [id])
-  items                OrderItem[]
-  paymentTransactions  PaymentTransaction[]
-  shipments            Shipment[]
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  customer                Customer             @relation(fields: [customerId], references: [id])
+  items                   OrderItem[]
+  paymentTransactions     PaymentTransaction[]
+  shipments               Shipment[]
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
 }
 
 model OrderItem {
@@ -420,31 +469,39 @@ model OrderItem {
 }
 
 model PaymentTransaction {
-  id                   String        @id @default(cuid())
-  orderId              String
-  method               PaymentMethod
-  status               PaymentStatus @default(PENDING)
-  externalReference    String?
-  amountInCents        Int
-  installments         Int?
-  paidAt               DateTime?
-  order                Order         @relation(fields: [orderId], references: [id])
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  orderId           String
+  method            PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  externalReference String?
+  amountInCents     Int
+  installments      Int?
+  paidAt            DateTime?
+  order             Order         @relation(fields: [orderId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
 model Shipment {
-  id                 String         @id @default(cuid())
-  orderId            String
-  carrier            String?
-  serviceCode        String?
-  trackingCode       String?
-  status             ShipmentStatus @default(PENDING)
+  id                  String         @id @default(cuid())
+  orderId             String
+  carrierId           String?
+  carrier             String?
+  carrierName         String?
+  serviceCode         String?
+  serviceName         String?
+  trackingCode        String?
+  recipient           String?
+  zipCode             String?
+  city                String?
+  state               String?
+  status              ShipmentStatus @default(PENDING)
   freightPriceInCents Int
   estimatedDeliveryAt DateTime?
-  shippedAt          DateTime?
-  deliveredAt        DateTime?
-  order              Order          @relation(fields: [orderId], references: [id])
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  shippedAt           DateTime?
+  deliveredAt         DateTime?
+  order               Order          @relation(fields: [orderId], references: [id])
+  carrierRef          Carrier?       @relation(fields: [carrierId], references: [id])
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 }

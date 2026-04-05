@@ -11,11 +11,14 @@ import {
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '@/core/security/roles.decorator';
+import { RolesGuard } from '@/core/security/roles.guard';
 import { JwtAuthGuard } from '@/modules/identity-access/jwt-auth.guard';
 import { CreateCarrierAddressRecordDto } from './dtos/create-carrier-address-record.dto';
 import { CreateCarrierContactRecordDto } from './dtos/create-carrier-contact-record.dto';
@@ -36,7 +39,9 @@ import { ShippingService } from './shipping.service';
 
 @ApiTags('Shipping')
 @ApiBearerAuth('bearer')
-@UseGuards(JwtAuthGuard)
+@ApiForbiddenResponse({ description: 'Acesso restrito a usuarios internos.' })
+@Roles('admin', 'manager')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('shipping')
 export class ShippingController {
   constructor(private readonly shippingService: ShippingService) {}

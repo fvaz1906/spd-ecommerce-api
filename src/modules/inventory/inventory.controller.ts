@@ -2,10 +2,13 @@ import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '@/core/security/roles.decorator';
+import { RolesGuard } from '@/core/security/roles.guard';
 import { JwtAuthGuard } from '@/modules/identity-access/jwt-auth.guard';
 import { InventoryService } from './inventory.service';
 import { CreateStockMovementDto } from './dtos/create-stock-movement.dto';
@@ -16,12 +19,14 @@ import {
 } from './dtos/inventory.responses';
 
 @ApiTags('Inventory')
+@ApiBearerAuth('bearer')
+@ApiForbiddenResponse({ description: 'Acesso restrito a usuarios internos.' })
+@Roles('admin', 'manager')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('inventory')
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Visao geral de estoque' })
   @ApiOkResponse({ type: InventoryOverviewResponseDto })
   @Get('overview')
@@ -29,8 +34,6 @@ export class InventoryController {
     return this.inventoryService.getOverview();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Listar itens de estoque vinculados aos produtos' })
   @ApiOkResponse({ type: [InventoryItemResponseDto] })
   @Get('items')
@@ -38,8 +41,6 @@ export class InventoryController {
     return this.inventoryService.listItems();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Listar ultimas movimentacoes de estoque' })
   @ApiOkResponse({ type: [StockMovementResponseDto] })
   @Get('movements')
@@ -47,8 +48,6 @@ export class InventoryController {
     return this.inventoryService.listMovements();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Criar movimentacao de estoque' })
   @ApiCreatedResponse({ type: StockMovementResponseDto })
   @Post('movements')

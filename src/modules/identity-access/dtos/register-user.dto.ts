@@ -1,11 +1,17 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
   IsEmail,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_POLICY_MESSAGE,
+  PASSWORD_REGEX,
+} from '@/core/security/password.policy';
 
 export class RegisterUserDto {
   @ApiProperty({
@@ -17,23 +23,24 @@ export class RegisterUserDto {
 
   @ApiProperty({
     example: 'felipe@example.com',
-    description: 'E-mail único para autenticação.',
+    description: 'E-mail unico para autenticacao.',
   })
   @IsEmail()
   email!: string;
 
   @ApiProperty({
     example: '12345678',
-    minLength: 8,
-    description: 'Senha do usuário com no mínimo 8 caracteres.',
+    minLength: PASSWORD_MIN_LENGTH,
+    description: 'Senha do usuario com no minimo 8 caracteres.',
   })
   @IsString()
-  @MinLength(8)
+  @MinLength(PASSWORD_MIN_LENGTH)
+  @Matches(PASSWORD_REGEX, { message: PASSWORD_POLICY_MESSAGE })
   password!: string;
 
   @ApiPropertyOptional({
     example: '12345678900',
-    description: 'Documento do cliente. Obrigatório no cadastro público.',
+    description: 'Documento do cliente. Obrigatorio no cadastro publico.',
   })
   @IsOptional()
   @IsString()

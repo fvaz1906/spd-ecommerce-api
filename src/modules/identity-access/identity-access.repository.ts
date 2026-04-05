@@ -37,31 +37,39 @@ export class IdentityAccessRepository {
     return user ? this.mapUser(user) : null;
   }
 
-  async createCustomerUser(input: {
+  async createCustomerAccount(input: {
     name: string;
     email: string;
-    passwordHash: string;
+    passwordHash?: string;
     document: string;
     phone?: string;
     birthDate?: Date;
-  }): Promise<AppUser> {
-    const user = await this.prismaService.user.create({
+  }): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
+    return this.prismaService.customer.create({
       data: {
         name: input.name,
         email: input.email,
-        passwordHash: input.passwordHash,
-        role: PrismaService.toRole('customer'),
-        customer: {
-          create: {
-            document: input.document,
-            phone: input.phone ?? null,
-            birthDate: input.birthDate ?? null,
-          },
-        },
+        passwordHash: input.passwordHash ?? null,
+        document: input.document,
+        phone: input.phone ?? null,
+        birthDate: input.birthDate ?? null,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
-
-    return this.mapUser(user);
   }
 
   async storePasswordResetCode(input: {

@@ -15,6 +15,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -22,6 +23,8 @@ import {
 } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { Roles } from '@/core/security/roles.decorator';
+import { RolesGuard } from '@/core/security/roles.guard';
 import { JwtAuthGuard } from '@/modules/identity-access/jwt-auth.guard';
 import { CatalogService } from './catalog.service';
 import {
@@ -37,6 +40,10 @@ import { UpdateProductDto } from './dtos/update-product.dto';
 import { UpdateProductVisibilityDto } from './dtos/update-product-visibility.dto';
 
 @ApiTags('Catalog')
+@ApiBearerAuth('bearer')
+@ApiForbiddenResponse({ description: 'Acesso restrito a usuarios internos.' })
+@Roles('admin', 'manager')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('catalog')
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
@@ -48,8 +55,6 @@ export class CatalogController {
     return this.catalogService.getOverview();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Listar categorias do catalogo' })
   @ApiOkResponse({ type: [CategoryResponseDto] })
   @Get('categories')
@@ -57,8 +62,6 @@ export class CatalogController {
     return this.catalogService.listCategories();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Criar categoria do catalogo' })
   @ApiCreatedResponse({ type: CategoryResponseDto })
   @Post('categories')
@@ -66,8 +69,6 @@ export class CatalogController {
     return this.catalogService.createCategory(body);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Remover categoria sem produtos vinculados' })
   @ApiParam({ name: 'id', description: 'ID da categoria' })
   @ApiOkResponse({ type: DeleteProductResponseDto })
@@ -76,8 +77,6 @@ export class CatalogController {
     return this.catalogService.deleteCategory(categoryId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Listar produtos do catalogo' })
   @ApiOkResponse({ type: [ProductResponseDto] })
   @Get('products')
@@ -85,8 +84,6 @@ export class CatalogController {
     return this.catalogService.listProducts();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Cadastrar produto com SKU principal' })
   @ApiCreatedResponse({ type: ProductResponseDto })
   @Post('products')
@@ -94,8 +91,6 @@ export class CatalogController {
     return this.catalogService.createProduct(body);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Obter um produto do catalogo' })
   @ApiParam({ name: 'id', description: 'ID do produto' })
   @ApiOkResponse({ type: ProductResponseDto })
@@ -104,8 +99,6 @@ export class CatalogController {
     return this.catalogService.getProduct(productId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Atualizar os dados do produto' })
   @ApiParam({ name: 'id', description: 'ID do produto' })
   @ApiOkResponse({ type: ProductResponseDto })
@@ -117,8 +110,6 @@ export class CatalogController {
     return this.catalogService.updateProduct(productId, body);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Atualizar destaque e publicacao do produto' })
   @ApiParam({ name: 'id', description: 'ID do produto' })
   @ApiOkResponse({ type: ProductResponseDto })
@@ -130,8 +121,6 @@ export class CatalogController {
     return this.catalogService.updateProductVisibility(productId, body);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Atualizar publicacao e destaque em lote' })
   @ApiOkResponse({ type: [ProductResponseDto] })
   @Patch('products/visibility/bulk')
@@ -139,8 +128,6 @@ export class CatalogController {
     return this.catalogService.updateProductsVisibilityInBulk(body);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Enviar imagens para um produto' })
   @ApiParam({ name: 'id', description: 'ID do produto' })
   @ApiConsumes('multipart/form-data')
@@ -174,8 +161,6 @@ export class CatalogController {
     return this.catalogService.uploadProductImages(productId, files);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Remover uma imagem do produto' })
   @ApiParam({ name: 'productId', description: 'ID do produto' })
   @ApiParam({ name: 'imageId', description: 'ID da imagem' })
@@ -188,8 +173,6 @@ export class CatalogController {
     return this.catalogService.removeProductImage(productId, imageId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Remover produto e arquivos de imagem associados' })
   @ApiParam({ name: 'id', description: 'ID do produto' })
   @ApiOkResponse({ type: DeleteProductResponseDto })

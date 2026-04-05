@@ -11,11 +11,14 @@ import {
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '@/core/security/roles.decorator';
+import { RolesGuard } from '@/core/security/roles.guard';
 import { JwtAuthGuard } from '@/modules/identity-access/jwt-auth.guard';
 import { CreateSupplierDto } from './dtos/create-supplier.dto';
 import {
@@ -33,7 +36,9 @@ import { SuppliersService } from './suppliers.service';
 
 @ApiTags('Suppliers')
 @ApiBearerAuth('bearer')
-@UseGuards(JwtAuthGuard)
+@ApiForbiddenResponse({ description: 'Acesso restrito a usuarios internos.' })
+@Roles('admin', 'manager')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('suppliers')
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}

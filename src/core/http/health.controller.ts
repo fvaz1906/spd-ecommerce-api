@@ -1,9 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { HealthCheckResponseDto } from './health-check-response.dto';
 
 @ApiTags('Health')
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   constructor(private readonly prismaService: PrismaService) {}

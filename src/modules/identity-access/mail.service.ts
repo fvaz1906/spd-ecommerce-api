@@ -9,6 +9,7 @@ export class IdentityAccessMailService {
   private readonly from: string;
 
   constructor(configService: ConfigService) {
+    const isProduction = configService.get<string>('NODE_ENV') === 'production';
     const host = configService.get<string>('MAIL_HOST');
     const port = Number(configService.get<string>('MAIL_PORT') ?? '587');
     const secure = configService.get<string>('MAIL_SECURE') === 'true';
@@ -18,20 +19,28 @@ export class IdentityAccessMailService {
       configService.get<string>('MAIL_FROM') ??
       'SPD Ecommerce <no-reply@spd.local>';
 
-    this.transporter =
-      host && user && pass
-        ? nodemailer.createTransport({
-            host,
-            port,
-            secure,
-            auth: {
-              user,
-              pass,
-            },
-          })
-        : nodemailer.createTransport({
-            jsonTransport: true,
-          });
+    if (host && user && pass) {
+      this.transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: {
+          user,
+          pass,
+        },
+      });
+      return;
+    }
+
+    if (isProduction) {
+      throw new Error(
+        'Mail transport is not fully configured for production environment.',
+      );
+    }
+
+    this.transporter = nodemailer.createTransport({
+      jsonTransport: true,
+    });
   }
 
   async sendPasswordResetCode(input: {
@@ -61,9 +70,5 @@ export class IdentityAccessMailService {
     this.logger.log(
       `Password reset message queued for ${input.to}. Transport response: ${info.messageId ?? 'json-transport'}`,
     );
-
-    if ('message' in info && typeof info.message === 'string') {
-      this.logger.debug(info.message);
-    }
   }
 }

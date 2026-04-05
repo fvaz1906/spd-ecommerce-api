@@ -44,6 +44,12 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## API documentation
+
+- Scalar UI: `/api/docs`
+- OpenAPI JSON: `/api/openapi-json`
+- Toggle docs with `API_DOCS_ENABLED=true` or `API_DOCS_ENABLED=false` in `.env`
+
 ## Run tests
 
 ```bash

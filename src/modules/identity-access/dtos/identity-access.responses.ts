@@ -9,9 +9,9 @@ export class IdentityOverviewResponseDto {
 
   @ApiProperty({
     example: [
-      'Controle de perfis: admin, gerente e cliente',
-      'Autenticacao e autorizacao por papeis',
-      'Base pronta para tokens, refresh e auditoria',
+      'Controle de perfis internos: admin e gerente',
+      'Autenticacao e autorizacao do painel administrativo',
+      'Recuperacao de senha para usuarios internos',
     ],
   })
   capabilities!: string[];
@@ -47,7 +47,7 @@ export class AuthenticatedUserDto {
   @ApiProperty({ example: 'felipe@example.com' })
   email!: string;
 
-  @ApiProperty({ example: 'customer' })
+  @ApiProperty({ example: 'admin' })
   role!: string;
 }
 
@@ -71,7 +71,7 @@ export class CurrentUserResponseDto {
   @ApiProperty({ example: 'felipe@example.com' })
   email!: string;
 
-  @ApiProperty({ example: 'customer' })
+  @ApiProperty({ example: 'admin' })
   role!: string;
 
   @ApiProperty({ example: true })
