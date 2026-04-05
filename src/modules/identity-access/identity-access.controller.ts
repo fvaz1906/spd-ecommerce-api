@@ -38,7 +38,12 @@ export class IdentityAccessController {
 
   @ApiOperation({ summary: 'Cadastrar conta de cliente do ecommerce' })
   @ApiCreatedResponse({ type: RegisteredUserResponseDto })
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({
+    default: {
+      limit: Number(process.env.AUTH_RATE_LIMIT_MAX ?? '5'),
+      ttl: Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? '60000'),
+    },
+  })
   @Post('register')
   register(@Body() body: RegisterUserDto) {
     return this.identityAccessService.register(body);
@@ -47,7 +52,13 @@ export class IdentityAccessController {
   @ApiOperation({ summary: 'Autenticar usuario interno do sistema' })
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiUnauthorizedResponse({ description: 'Credenciais invalidas.' })
-  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 300_000 } })
+  @Throttle({
+    default: {
+      limit: Number(process.env.AUTH_RATE_LIMIT_MAX ?? '5'),
+      ttl: Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? '60000'),
+      blockDuration: Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? '60000') * 5,
+    },
+  })
   @Post('login')
   login(@Body() body: LoginDto) {
     return this.identityAccessService.login(body);
@@ -57,7 +68,17 @@ export class IdentityAccessController {
     summary: 'Solicitar codigo de recuperacao de senha para usuario interno',
   })
   @ApiOkResponse({ type: GenericMessageResponseDto })
-  @Throttle({ default: { limit: 3, ttl: 60_000, blockDuration: 600_000 } })
+  @Throttle({
+    default: {
+      limit: Math.max(
+        1,
+        Math.floor(Number(process.env.AUTH_RATE_LIMIT_MAX ?? '5') / 2),
+      ),
+      ttl: Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? '60000'),
+      blockDuration:
+        Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? '60000') * 10,
+    },
+  })
   @Post('forgot-password')
   forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.identityAccessService.forgotPassword(body);
@@ -67,7 +88,14 @@ export class IdentityAccessController {
     summary: 'Redefinir senha de usuario interno com codigo temporario',
   })
   @ApiOkResponse({ type: GenericMessageResponseDto })
-  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 600_000 } })
+  @Throttle({
+    default: {
+      limit: Number(process.env.AUTH_RATE_LIMIT_MAX ?? '5'),
+      ttl: Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? '60000'),
+      blockDuration:
+        Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? '60000') * 10,
+    },
+  })
   @Post('reset-password')
   resetPassword(@Body() body: ResetPasswordDto) {
     return this.identityAccessService.resetPassword(body);

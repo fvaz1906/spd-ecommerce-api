@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { IdentityAccessRepository } from './identity-access.repository';
 import { IdentityAccessService } from './identity-access.service';
@@ -20,7 +21,15 @@ describe('IdentityAccessService', () => {
 
     const jwtService = {} as JwtService;
     const mailService = {} as never;
-    const service = new IdentityAccessService(repository, jwtService, mailService);
+    const configService = {
+      get: jest.fn().mockReturnValue('10'),
+    } as unknown as ConfigService;
+    const service = new IdentityAccessService(
+      repository,
+      jwtService,
+      mailService,
+      configService,
+    );
 
     const result = await service.register({
       name: 'Felipe',
@@ -50,7 +59,15 @@ describe('IdentityAccessService', () => {
 
     const jwtService = {} as JwtService;
     const mailService = {} as never;
-    const service = new IdentityAccessService(repository, jwtService, mailService);
+    const configService = {
+      get: jest.fn().mockReturnValue('10'),
+    } as unknown as ConfigService;
+    const service = new IdentityAccessService(
+      repository,
+      jwtService,
+      mailService,
+      configService,
+    );
 
     await expect(
       service.register({

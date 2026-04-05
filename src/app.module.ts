@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from '@/core/prisma/prisma.module';
@@ -47,7 +48,8 @@ import { SuppliersModule } from '@/modules/suppliers/suppliers.module';
           }
 
           if (
-            config.API_DOCS_ENABLED === 'true' &&
+            (config.DOCS_ENABLED === 'true' ||
+              config.API_DOCS_ENABLED === 'true') &&
             config.ALLOW_PUBLIC_API_DOCS !== 'true'
           ) {
             throw new Error(
@@ -69,13 +71,22 @@ import { SuppliersModule } from '@/modules/suppliers/suppliers.module';
         return config;
       },
     }),
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60_000,
-        limit: 120,
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: Number(
+              configService.get<string>('GLOBAL_RATE_LIMIT_TTL_MS') ?? '60000',
+            ),
+            limit: Number(
+              configService.get<string>('GLOBAL_RATE_LIMIT_MAX') ?? '120',
+            ),
+          },
+        ],
+      }),
+    }),
     PrismaModule,
     CatalogModule,
     IdentityAccessModule,

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { hash } from 'bcryptjs';
 import { lookupViaCep } from '@/core/http/viacep.client';
 import { PrismaService } from '@/core/prisma/prisma.service';
@@ -14,7 +15,10 @@ import { UpdateCustomerDto } from './dtos/update-customer.dto';
 
 @Injectable()
 export class CustomersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async getOverview() {
     const customers = await this.prisma.customer.findMany({
@@ -102,7 +106,9 @@ export class CustomersService {
         name: input.name.trim(),
         email,
         googleId,
-        passwordHash: input.password ? await hash(input.password, 10) : null,
+        passwordHash: input.password
+          ? await hash(input.password, this.getBcryptSaltRounds())
+          : null,
         isActive: input.isActive ?? true,
         documentType: input.documentType,
         document,
@@ -154,7 +160,7 @@ export class CustomersService {
               ? new Date(input.birthDate)
               : null,
         passwordHash: input.password
-          ? await hash(input.password, 10)
+          ? await hash(input.password, this.getBcryptSaltRounds())
           : customer.passwordHash,
       } as any,
       include: this.customerIncludes() as any,
@@ -546,5 +552,9 @@ export class CustomersService {
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
     };
+  }
+
+  private getBcryptSaltRounds() {
+    return Number(this.configService.get<string>('BCRYPT_SALT_ROUNDS') ?? '10');
   }
 }

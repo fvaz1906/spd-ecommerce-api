@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import helmet from 'helmet';
@@ -11,16 +12,25 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const appName =
+    configService.get<string>('APP_NAME')?.trim() || 'SPD Ecommerce API';
+  const appUrl = configService.get<string>('APP_URL')?.trim();
+  const apiPrefix = configService.get<string>('API_PREFIX')?.trim() || 'api';
+  const apiVersion = configService.get<string>('API_VERSION')?.trim();
   const docsEnabled = readBoolean(
-    configService.get<string>('API_DOCS_ENABLED'),
+    configService.get<string>('DOCS_ENABLED') ??
+      configService.get<string>('API_DOCS_ENABLED'),
     !isProduction,
   );
-  const apiPrefix = 'api';
   const docsPath = `/${apiPrefix}/docs`;
   const openApiJsonPath = `/${apiPrefix}/openapi-json`;
   const trustProxy = readBoolean(
     configService.get<string>('TRUST_PROXY'),
     isProduction,
+  );
+  const corsCredentials = readBoolean(
+    configService.get<string>('CORS_CREDENTIALS'),
+    false,
   );
   const bodySizeLimit =
     configService.get<string>('HTTP_BODY_LIMIT')?.trim() || '1mb';
@@ -46,12 +56,18 @@ async function bootstrap() {
       configService.get<string>('CORS_ORIGINS'),
       isProduction,
     ),
-    credentials: false,
+    credentials: corsCredentials,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type'],
     maxAge: 86_400,
   });
   app.setGlobalPrefix(apiPrefix);
+  if (apiVersion) {
+    app.enableVersioning({
+      type: VersioningType.URI,
+      defaultVersion: apiVersion.replace(/^v/i, ''),
+    });
+  }
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -61,7 +77,7 @@ async function bootstrap() {
   );
 
   const openApiConfig = new DocumentBuilder()
-    .setTitle('SPD Ecommerce API')
+    .setTitle(appName)
     .setDescription(
       'API da loja virtual SPD Ecommerce com autenticacao, catalogo, carrinho, pedidos e integracoes operacionais.',
     )
@@ -76,6 +92,10 @@ async function bootstrap() {
       'bearer',
     )
     .build();
+
+  if (appUrl) {
+    openApiConfig.servers = [{ url: appUrl }];
+  }
 
   const openApiDocument = SwaggerModule.createDocument(app, openApiConfig);
 
@@ -102,6 +122,10 @@ function resolveCorsOrigins(
   isProduction: boolean,
 ): string[] | boolean {
   if (value?.trim()) {
+    if (value.trim() === '*') {
+      return true;
+    }
+
     return value
       .split(',')
       .map((origin) => origin.trim())

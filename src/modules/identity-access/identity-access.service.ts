@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomInt } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
@@ -24,6 +25,7 @@ export class IdentityAccessService {
     private readonly repository: IdentityAccessRepository,
     private readonly jwtService: JwtService,
     private readonly mailService: IdentityAccessMailService,
+    private readonly configService: ConfigService,
   ) {}
 
   getOverview() {
@@ -59,7 +61,7 @@ export class IdentityAccessService {
       throw new ConflictException('Email already in use.');
     }
 
-    const passwordHash = await hash(body.password, 10);
+    const passwordHash = await hash(body.password, this.getBcryptSaltRounds());
 
     const customer = await this.repository.createCustomerAccount({
       name: body.name,
@@ -172,7 +174,7 @@ export class IdentityAccessService {
       throw new BadRequestException('Invalid or expired reset code.');
     }
 
-    const passwordHash = await hash(body.password, 10);
+    const passwordHash = await hash(body.password, this.getBcryptSaltRounds());
 
     await this.repository.updateUserPassword(
       validResetCode.userId,
@@ -226,5 +228,9 @@ export class IdentityAccessService {
       email: user.email,
       role: user.role,
     };
+  }
+
+  private getBcryptSaltRounds() {
+    return Number(this.configService.get<string>('BCRYPT_SALT_ROUNDS') ?? '10');
   }
 }
